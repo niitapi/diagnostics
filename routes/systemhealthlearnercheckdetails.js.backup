@@ -1,0 +1,149 @@
+var express = require('express');
+var CustomError = require('../controllers/errorhandling/customerror');
+var learnerhealthcheckdetails = require('../controllers/learnerhealthcheckdetails');
+var learnerhealthcheck = require('../controllers/learnerhealthcheck');
+var request = require('request'); //added by bharani
+const config = require('../config');
+var async = require("async");
+/* GET home page. */
+var routes = function (db) {
+  var systemhealthcheckrouter = express.Router();
+  systemhealthcheckrouter.route('/systemhealthlearnercheckdetails').post(function (req, res, next) {
+    console.log(req.body);
+    try {
+      if (!req.body.OrganizationID || !req.body.BUID || !req.body.ApplicationID) {
+        var err = new CustomError("bad arguments", {
+          "line no": 10,
+          "severity": "ERROR",
+          "file": "systemhealthlearnercheck",
+          "line": "17",
+          "routine": "empty check of request object"
+        });
+        next(err);
+        return;
+      }
+    } catch (ex) {
+      next(ex);
+      return;
+    }
+    learnerhealthcheckdetails.createHealthlearnercheckdetails(db, req, res, next);
+    
+  })
+  .get(function(req, res, next){
+    console.log(req.query.userid);
+  
+    try {
+
+  /*code added by bharani*/
+      request.get({ url: config.tokenApiBaseUrl + "api/v1/validate",
+    headers:{'x-access-token':req.get("Authorization")} },      
+      function(error, response) { 
+        if (!error) { 
+           var parsed_body = JSON.parse(response.body);
+           if(parsed_body.success == true)
+                if (!req.query.userid) {
+                  learnerhealthcheckdetails.getAllData(db, req, res, next);
+                }else{
+                  learnerhealthcheckdetails.getUserSpecificData(db, req, res, next);
+              }
+              else
+              {
+                var err = new CustomError("bad arguments", {
+                  "line no": 55,
+                  "severity": "ERROR",
+                  "file": "systemhealthlearnercheckdetail",
+                  "line": "55",
+                  "routine": parsed_body.message
+                });
+                next(err);
+                return;
+              }
+          }
+          else
+            { 
+              var err = new CustomError("bad arguments", {
+              "line no": 65,
+              "severity": "ERROR",
+              "file": "systemhealthlearnercheckdetail",
+              "line": "65",
+              "routine": "empty check of request object"
+            });
+            next(err);
+            return;
+          }
+       }); 
+
+      /**code ended by bharani */
+   
+    } catch (ex) {
+      next(ex);
+      return;
+    }
+    
+  })
+  .put(function(req, res, next){
+    try {
+      if (!req.body.UserID || !req.body.CheckID || !req.body.id) {
+        var err = new CustomError("bad arguments", {
+          "line no": 29,
+          "severity": "ERROR",
+          "file": "systemhealthlearnercheckdetail",
+          "line": "29",
+          "routine": "empty check of request object"
+        });
+        next(err);
+        return;
+      }
+      if(!!req.body.Issue){
+        async.series([function(callback){
+          learnerhealthcheckdetails.updateItemHealthLearnercheckDetails(db,req, res, next).then(function(){
+            callback(null,null)
+          })
+          
+        },function(callback){
+          if(req.body.Issue=="Y"){
+            learnerhealthcheck.updateHealthlearnercheck(db,req,res,next)
+            .then(function(){
+              callback(null,null)
+            })
+            }
+            else{
+              callback(null,null);
+            }
+           
+        }],function(err,result){
+          if(err){
+            console.log("sddddddddd     ".err);
+            res.status(500)
+            .json({
+              status: 'error',
+              message: err
+            });
+          }else{
+            res.status(200)
+            .json({
+              status: 'success',
+              message: 'Updated complete learner health check and details '
+            });
+          }
+         
+        });
+       
+        
+  
+      }else{
+        learnerhealthcheckdetails.updateResolveHealthlearnercheckdetails(db, req, res, next);
+      }
+    } catch (ex) {
+      next(ex);
+      return;
+    }
+   
+    
+    
+  })
+  return systemhealthcheckrouter;
+}
+
+
+module.exports = routes;
