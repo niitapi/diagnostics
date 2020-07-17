@@ -25,7 +25,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 app.use('/api', systemhealthcheck);
 app.use('/api', systemhealthlearnercheck);
 app.use('/api', systemhealthlearnercheckdetails);
@@ -61,6 +60,7 @@ app.use(function(err, req, res, next) {
 });
 
 // listen (start app with node server.js) ======================================
-app.listen(8002);
-console.log("App listening on port 8002");
+// app.listen(8002);
+//console.log("App listening on port 8002");
 // module.exports = app;
+module.exports = app
